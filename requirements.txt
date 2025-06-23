@@ -1,0 +1,12 @@
+numpy
+tensorflow==2.13.0
+tensorflow-hub==0.15.0
+sounddevice
+soundfile
+matplotlib
+scipy
+pydub
+SpeechRecognition
+fastapi
+uvicorn
+cffi
