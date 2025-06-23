@@ -1,0 +1,49 @@
+# Ambiente virtual local
+.venv/
+venv/
+
+# PyCharm
+.idea/
+
+# Bytecode Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Arquivos de log
+*.log
+
+# Configs e dados temporários de execução
+*.sqlite3
+*.db
+*.egg-info/
+dist/
+build/
+*.egg
+*.eggs/
+
+# Cache de pacotes
+pip-wheel-metadata/
+*.whl
+
+# Arquivos gerados por Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Dados temporários de TensorFlow
+checkpoint/
+*.ckpt
+saved_model/
+events.out.tfevents.*
+logs/
+runs/
+
+# Dados de matplotlib
+.matplotlib/
+
+# Arquivos de cache do FastAPI com Uvicorn
+*.pid
+
+# Outros arquivos que podem ser grandes ou desnecessários
+.DS_Store
+Thumbs.db
