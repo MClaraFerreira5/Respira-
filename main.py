@@ -11,24 +11,24 @@ from datetime import datetime
 from scipy import signal
 import speech_recognition as sr
 
-# Configura o FFmpeg para o PyDub
 os.environ["PATH"] += os.pathsep + 'C:\\ffmpeg\\bin'
 
-# Configurações
 MODEL_URL = 'https://tfhub.dev/google/yamnet/1'
-SAMPLE_RATE = 16000  # YAMNet requer áudio em 16kHz
-RECORD_DURATION = 3  # Duração da gravação em segundos
-THRESHOLDS = {        # Modificação: thresholds específicos por classe
-    'Cough': 0.15,
-    'Snore': 0.15,
-    'Breathing': 0.15,
-    'Sneeze': 0.15,
-    'Gasp': 0.15,
-    'Speech': 0.15
+SAMPLE_RATE = 16000  
+RECORD_DURATION = 3  
+THRESHOLDS = {        
+    'Cough': 0.30,
+    'Snore': 0.2,
+    'Breathing': 0.30,
+    'Laughter': 0.25,
+    'Speech': 0.30,
+    'Silence': 0.10,
+    'Sneeze': 0.35,
+    'Gasp': 0.2
 }
 
-MIN_COUGH_DURATION = 0.2  # Duração mínima de uma tosse em segundos
-COUGH_PATTERN_COUNT = 3  # Número mínimo de tosses para caracterizar um padrão
+MIN_COUGH_DURATION = 0.2  
+COUGH_PATTERN_COUNT = 3  
 KEYWORD = "ajuda"
 
 # Carrega o modelo YAMNet
@@ -63,7 +63,7 @@ class AudioHistory:
             self.audio_segments.pop(0)
             self.timestamps.pop(0)
     
-    def smooth(self):     # Modificação: suavização de predições
+    def smooth(self):  
         if not self.predictions:
             return np.zeros(521)
         return np.mean(self.predictions, axis=0)
@@ -77,7 +77,7 @@ class AudioHistory:
         return sum(1 for p in self.predictions
                    if p[CLASS_INDICES['Cough']] > threshold)
 
-def capture_noise_profile(duration=2):    # Modificação: captura de ruído ambiente
+def capture_noise_profile(duration=2):   
     print("Capturando perfil de ruído de fundo...")
     audio = sd.rec(int(duration * SAMPLE_RATE), samplerate=SAMPLE_RATE, channels=1, dtype='float32')
     sd.wait()
@@ -180,26 +180,42 @@ def predict_sound(audio):
         print(f"Erro na predição: {e}")
         return -1, 0, np.zeros(521)
 
-def is_cough(prediction, history=None):
-    cough_score = prediction[CLASS_INDICES['Cough']]
+def is_sneeze(prediction, history=None):
+    sneeze_score = prediction[CLASS_INDICES['Sneeze']]
     silence_score = prediction[CLASS_INDICES['Silence']]
-    above_threshold = cough_score > THRESHOLDS['Cough'] 
+    above_threshold = sneeze_score > THRESHOLDS['Sneeze']
     not_silence = silence_score < 0.1
     is_pattern = False
-    if history is not None and len(history.predictions) >= COUGH_PATTERN_COUNT:
-        recent_coughs = sum(1 for p in history.predictions[-COUGH_PATTERN_COUNT:]
-                            if p[CLASS_INDICES['Cough']] > THRESHOLDS['Cough'])  # Fixed: Use specific threshold
-        is_pattern = recent_coughs >= COUGH_PATTERN_COUNT - 1
-    return above_threshold and not_silence and (is_pattern or cough_score > 0.5)
+    if history is not None and len(history.predictions) >= 3:
+        recent_sneezes = sum(1 for p in history.predictions[-3:]
+                             if p[CLASS_INDICES['Sneeze']] > THRESHOLDS['Sneeze'])
+        is_pattern = recent_sneezes >= 2
+    return above_threshold and not_silence and (is_pattern or sneeze_score > 0.3)
 
-def is_sneeze(prediction):
-    return prediction[CLASS_INDICES['Sneeze']] > THRESHOLDS['Sneeze']  # Fixed: Use specific threshold
+def is_snore(prediction, history=None):
+    snore_score = prediction[CLASS_INDICES['Snore']]
+    silence_score = prediction[CLASS_INDICES['Silence']]
+    above_threshold = snore_score > THRESHOLDS['Snore']
+    not_silence = silence_score < 0.1
+    is_pattern = False
+    if history is not None and len(history.predictions) >= 3:
+        recent_snores = sum(1 for p in history.predictions[-3:]
+                            if p[CLASS_INDICES['Snore']] > THRESHOLDS['Snore'])
+        is_pattern = recent_snores >= 2
+    return above_threshold and not_silence and (is_pattern or snore_score > 0.3)
 
-def is_snore(prediction):
-    return prediction[CLASS_INDICES['Snore']] > THRESHOLDS['Snore']  # Fixed: Use specific threshold
+def is_gasp(prediction, history=None):
+    gasp_score = prediction[CLASS_INDICES['Gasp']]
+    silence_score = prediction[CLASS_INDICES['Silence']]
+    above_threshold = gasp_score > THRESHOLDS['Gasp']
+    not_silence = silence_score < 0.1
+    is_pattern = False
+    if history is not None and len(history.predictions) >= 3:
+        recent_gasps = sum(1 for p in history.predictions[-3:]
+                           if p[CLASS_INDICES['Gasp']] > THRESHOLDS['Gasp'])
+        is_pattern = recent_gasps >= 2
+    return above_threshold and not_silence and (is_pattern or gasp_score > 0.3)
 
-def is_gasp(prediction):
-    return prediction[CLASS_INDICES['Gasp']] > THRESHOLDS['Gasp']  # Fixed: Use specific threshold
 
 def recognize_keyword(audio, sample_rate):
     """Realiza reconhecimento de fala e verifica se palavra-chave está presente"""
@@ -267,8 +283,7 @@ def main():
 
             if recognize_keyword(filtered_audio, SAMPLE_RATE):
                 print("🆘 Palavra-chave 'ajuda' detectada!")
-                save_event_audio(filtered_audio, SAMPLE_RATE, "ajuda", 1)  # Salvando como evento especial
-                # Você pode adicionar outras ações aqui, como enviar alerta, tocar som, etc.
+                save_event_audio(filtered_audio, SAMPLE_RATE, "ajuda", 1) 
 
             for label, idx in CLASS_INDICES.items():
                 if label in THRESHOLDS and smoothed_pred[idx] > THRESHOLDS[label]:
