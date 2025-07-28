@@ -4,13 +4,13 @@ import sounddevice as sd
 import time
 from datetime import datetime
 
-from app.services.audio_history import AudioHistory
-from app.services.audio_processing import preprocess_audio
-from app.services.prediction import predict_sound, is_cough, get_class_name, is_event
-from app.services.visualization import generate_spectrogram
+from app.services.processing.audio_history import AudioHistory
+from app.services.processing.audio_processing import preprocess_audio
+from app.services.prediction_recognition import predict_sound, get_class_name, is_event
+from app.services.visualization.visualization import generate_spectrogram
 from app.services.utils import save_event_audio
-from app.services.noise_processing import capture_noise_profile
-from app.services.speech_recognition import recognize_keyword
+from app.services.processing.noise_processing import capture_noise_profile
+from app.services.prediction_recognition.speech_recognition import recognize_keyword
 from app.core.config import SAMPLE_RATE, RECORD_DURATION, CLASS_INDICES, THRESHOLDS
 
 # Configura o FFmpeg para o PyDub
@@ -104,8 +104,8 @@ if __name__ == "__main__":
 #                 time.sleep(1)
 #                 continue
 #
-#             _, _, prediction = predict_sound(filtered_audio)
-#             history.add_prediction(prediction, filtered_audio)
+#             _, _, prediction_recognition = predict_sound(filtered_audio)
+#             history.add_prediction(prediction_recognition, filtered_audio)
 #             smoothed_pred = history.smooth()
 #
 #             top_class_idx = np.argmax(smoothed_pred)
@@ -176,8 +176,8 @@ if __name__ == "__main__":
 #         self.audio_segments = []
 #         self.timestamps = []
 #
-#     def add_prediction(self, prediction, audio_segment=None):
-#         self.predictions.append(prediction)
+#     def add_prediction(self, prediction_recognition, audio_segment=None):
+#         self.predictions.append(prediction_recognition)
 #         self.audio_segments.append(audio_segment)
 #         self.timestamps.append(datetime.now())
 #
@@ -238,7 +238,7 @@ if __name__ == "__main__":
 #     return audio.astype(np.float32)
 
 
-# def generate_spectrogram(audio, sample_rate=SAMPLE_RATE, prediction=None):
+# def generate_spectrogram(audio, sample_rate=SAMPLE_RATE, prediction_recognition=None):
 #     plt.figure(figsize=(12, 8))
 #
 #     plt.subplot(3, 1, 1)
@@ -258,10 +258,10 @@ if __name__ == "__main__":
 #     plt.ylabel('Amplitude')
 #     plt.grid(True)
 #
-#     if prediction is not None:
+#     if prediction_recognition is not None:
 #         plt.subplot(3, 1, 3)
 #         classes = list(CLASS_INDICES.keys())
-#         values = [prediction[idx] for idx in CLASS_INDICES.values()]
+#         values = [prediction_recognition[idx] for idx in CLASS_INDICES.values()]
 #         colors = ['red' if cls == 'Cough' else 'blue' for cls in classes]
 #         bars = plt.bar(classes, values, color=colors)
 #         plt.title('Probabilidades das Classes')
@@ -283,17 +283,17 @@ if __name__ == "__main__":
 #         waveform = audio / (np.max(np.abs(audio)) + 1e-8)
 #         waveform = waveform.astype(np.float32)
 #         scores, embeddings, spectrogram = model(waveform)
-#         prediction = np.mean(scores, axis=0)
-#         top_class = np.argmax(prediction)
-#         confidence = prediction[top_class]
-#         return top_class, confidence, prediction
+#         prediction_recognition = np.mean(scores, axis=0)
+#         top_class = np.argmax(prediction_recognition)
+#         confidence = prediction_recognition[top_class]
+#         return top_class, confidence, prediction_recognition
 #     except Exception as e:
 #         print(f"Erro na predição: {e}")
 #         return -1, 0, np.zeros(521)
 #
-# def is_cough(prediction, history=None):
-#     cough_score = prediction[CLASS_INDICES['Cough']]
-#     silence_score = prediction[CLASS_INDICES['Silence']]
+# def is_cough(prediction_recognition, history=None):
+#     cough_score = prediction_recognition[CLASS_INDICES['Cough']]
+#     silence_score = prediction_recognition[CLASS_INDICES['Silence']]
 #     above_threshold = cough_score > THRESHOLDS['Cough']
 #     not_silence = silence_score < 0.1
 #     is_pattern = False
@@ -303,14 +303,14 @@ if __name__ == "__main__":
 #         is_pattern = recent_coughs >= COUGH_PATTERN_COUNT - 1
 #     return above_threshold and not_silence and (is_pattern or cough_score > 0.5)
 
-# def is_sneeze(prediction):
-#     return prediction[CLASS_INDICES['Sneeze']] > THRESHOLDS['Sneeze']  # Fixed: Use specific threshold
+# def is_sneeze(prediction_recognition):
+#     return prediction_recognition[CLASS_INDICES['Sneeze']] > THRESHOLDS['Sneeze']  # Fixed: Use specific threshold
 #
-# def is_snore(prediction):
-#     return prediction[CLASS_INDICES['Snore']] > THRESHOLDS['Snore']  # Fixed: Use specific threshold
+# def is_snore(prediction_recognition):
+#     return prediction_recognition[CLASS_INDICES['Snore']] > THRESHOLDS['Snore']  # Fixed: Use specific threshold
 #
-# def is_gasp(prediction):
-#     return prediction[CLASS_INDICES['Gasp']] > THRESHOLDS['Gasp']  # Fixed: Use specific threshold
+# def is_gasp(prediction_recognition):
+#     return prediction_recognition[CLASS_INDICES['Gasp']] > THRESHOLDS['Gasp']  # Fixed: Use specific threshold
 
 # def recognize_keyword(audio, sample_rate):
 #     """Realiza reconhecimento de fala e verifica se palavra-chave está presente"""

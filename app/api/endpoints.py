@@ -1,10 +1,10 @@
 from fastapi import APIRouter, UploadFile, File
 import soundfile as sf
 
-from app.services.audio_processing import preprocess_audio
-from app.services.prediction import predict_sound
-from app.services.visualization import generate_spectrogram
-from app.services.logger import log_event
+from app.services.processing.audio_processing import preprocess_audio
+from app.services.prediction_recognition.prediction import predict_sound
+from app.services.visualization.visualization import generate_spectrogram
+from app.services.log.logger import log_event
 
 router = APIRouter()
 

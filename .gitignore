@@ -47,3 +47,6 @@ runs/
 # Outros arquivos que podem ser grandes ou desnecessários
 .DS_Store
 Thumbs.db
+
+# Arquivos de áudio bruto
+*.wav
