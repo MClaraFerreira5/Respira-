@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import signal
-from app.core.config import SAMPLE_RATE
+from core.config import SAMPLE_RATE
 
 
 def preprocess_audio(audio):

@@ -1,10 +1,10 @@
 import os
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 
 # Banco de dados
 class Settings(BaseSettings):
-    POSTGRES_DB: str
+    POSTGRES_DB: str = "respira_mais"
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: str = "5432"
 

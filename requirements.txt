@@ -29,3 +29,4 @@ passlib
 cffi
 python-dotenv
 pydantic
+pydantic-settings

@@ -4,14 +4,14 @@ import sounddevice as sd
 import time
 from datetime import datetime
 
-from app.services.processing.audio_history import AudioHistory
-from app.services.processing.audio_processing import preprocess_audio
-from app.services.prediction_recognition.prediction import predict_sound, get_class_name, is_event
-from app.services.visualization.visualization import generate_spectrogram
-from app.services.utils import save_event_audio
-from app.services.processing.noise_processing import capture_noise_profile
-from app.services.prediction_recognition.speech_recognition import recognize_keyword
-from app.core.config import SAMPLE_RATE, RECORD_DURATION, CLASS_INDICES, THRESHOLDS
+from services.processing.audio_history import AudioHistory
+from services.processing.audio_processing import preprocess_audio
+from services import predict_sound, get_class_name, is_event
+from services.visualization.visualization import generate_spectrogram
+from services import save_event_audio
+from services.processing.noise_processing import capture_noise_profile
+from services import recognize_keyword
+from core import SAMPLE_RATE, RECORD_DURATION, CLASS_INDICES, THRESHOLDS
 
 # Configura o FFmpeg para o PyDub
 os.environ["PATH"] += os.pathsep + 'C:\\ffmpeg\\bin'

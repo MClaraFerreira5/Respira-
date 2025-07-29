@@ -2,6 +2,10 @@
 
 Este projeto é o backend da aplicação **Respira+**, desenvolvido com FastAPI, SQLAlchemy, PostgreSQL e Alembic para controle de versão do banco de dados.
 
+## Criando o database
+
+Inicialmente crie, através do pgAdmin, o database `respira_mais`
+
 ## Executando a aplicação
 
 Para rodar a API localmente:
@@ -19,7 +23,7 @@ Usamos o Alembic para versionamento de schema do banco de dados. As migrations s
 1. Importe o modelo no arquivo `app/db/base_class_imports.py`, por exemplo:
 
 ```python
-from app.models.user_model import User
+from models.user_model import User
 ````
 
 2. Gere a migration com:

@@ -9,9 +9,9 @@ from alembic import context
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Importa as configurações e os modelos
-from app.core.config import settings
-from app.db.base import Base
-import app.db.base_class_imports  # importa todos os models para registrar no metadata
+from core.config import settings
+from db.base import Base
+import db.base_class_imports
 
 # Config Alembic
 config = context.config

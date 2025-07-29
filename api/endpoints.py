@@ -2,12 +2,12 @@ from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from sqlalchemy.orm import Session
 import soundfile as sf
 
-from app.services.processing.audio_processing import preprocess_audio
-from app.services.prediction_recognition.prediction import predict_sound
-from app.services.visualization.visualization import generate_spectrogram
-from app.services.log.logger import log_event
-from app.db.session import get_db
-from app.services.user import user_service
+from services.processing.audio_processing import preprocess_audio
+from services.prediction_recognition.prediction import predict_sound
+from services.visualization.visualization import generate_spectrogram
+from services.log.logger import log_event
+from db.session import get_db
+from services.user import user_service
 
 router = APIRouter()
 

@@ -1,6 +1,6 @@
 import numpy as np
 import sounddevice as sd
-from app.core.config import SAMPLE_RATE
+from core.config import SAMPLE_RATE
 
 
 def capture_noise_profile(duration=2):
