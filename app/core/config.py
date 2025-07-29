@@ -1,8 +1,33 @@
-# Configurações
+import os
+from pydantic import BaseSettings
+
+
+# Banco de dados
+class Settings(BaseSettings):
+    POSTGRES_DB: str
+    POSTGRES_HOST: str = "localhost"
+    POSTGRES_PORT: str = "5432"
+
+    POSTGRES_USER: str = os.environ.get("DB_USER", "")
+    POSTGRES_PASSWORD: str = os.environ.get("DB_PASSWORD", "")
+
+    @property
+    def DATABASE_URL(self):
+        return (
+            f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        )
+
+    class Config:
+        env_file = ".env"
+
+
+settings = Settings()
+
 MODEL_URL = 'https://tfhub.dev/google/yamnet/1'
 SAMPLE_RATE = 16000  # YAMNet requer áudio em 16kHz
 RECORD_DURATION = 3  # Duração da gravação em segundos
-THRESHOLDS = {        # Modificação: thresholds específicos por classe
+THRESHOLDS = {  # Modificação: thresholds específicos por classe
     'Cough': 0.15,
     'Snore': 0.15,
     'Breathing': 0.15,

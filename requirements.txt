@@ -1,12 +1,31 @@
+# Matemática
 numpy
+scipy
+matplotlib
+
+# Machine Learning
 tensorflow==2.13.0
 tensorflow-hub==0.15.0
+
+# Processamento de áudio
 sounddevice
 soundfile
-matplotlib
-scipy
 pydub
 SpeechRecognition
+
+# API & Web
 fastapi
 uvicorn
+
+# Database
+sqlalchemy
+psycopg2-binary
+alembic
+
+# Segurança e autenticação
+passlib
+
+# Utilitários
 cffi
+python-dotenv
+pydantic

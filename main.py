@@ -6,7 +6,7 @@ from datetime import datetime
 
 from app.services.processing.audio_history import AudioHistory
 from app.services.processing.audio_processing import preprocess_audio
-from app.services.prediction_recognition import predict_sound, get_class_name, is_event
+from app.services.prediction_recognition.prediction import predict_sound, get_class_name, is_event
 from app.services.visualization.visualization import generate_spectrogram
 from app.services.utils import save_event_audio
 from app.services.processing.noise_processing import capture_noise_profile
