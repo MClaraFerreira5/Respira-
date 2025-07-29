@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow_hub as hub
-from app.core.config import MODEL_URL, CLASS_INDICES, THRESHOLDS, COUGH_PATTERN_COUNT
+from core.config import MODEL_URL, CLASS_INDICES, THRESHOLDS, COUGH_PATTERN_COUNT
 
 model = hub.load(MODEL_URL)
 

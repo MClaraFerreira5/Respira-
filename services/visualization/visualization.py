@@ -2,7 +2,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import numpy as np
-from app.core.config import SAMPLE_RATE, CLASS_INDICES
+from core.config import SAMPLE_RATE, CLASS_INDICES
 
 matplotlib.use('TkAgg')
 

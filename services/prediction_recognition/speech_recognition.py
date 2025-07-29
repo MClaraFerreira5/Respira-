@@ -1,6 +1,6 @@
 import soundfile as sf
 import speech_recognition as sr
-from app.core.config import KEYWORD
+from core.config import KEYWORD
 
 
 def recognize_keyword(audio, sample_rate):
