@@ -1,4 +1,4 @@
-# Matemática
+# Processamento e visualização de dados
 numpy
 scipy
 matplotlib
@@ -23,7 +23,9 @@ psycopg2-binary
 alembic
 
 # Segurança e autenticação
-passlib
+passlib[bcrypt]
+bcrypt<4.1
+python-jose
 
 # Utilitários
 cffi
