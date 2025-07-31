@@ -8,24 +8,49 @@ from services.visualization.visualization import generate_spectrogram
 from services.log.logger import log_event
 from db.session import get_db
 from services.user import user_service
-
+from services.auth.auth import create_access_token
+from api.dtos import UserDto, LoginDto
+from services.log.logger import log_event
 router = APIRouter()
 
 
 @router.post("/register")
-def register(name: str, email: str, password: str, db: Session = Depends(get_db)):
-    existing = user_service.login_user(db, email, password)
+def register(userResponse: UserDto, db: Session = Depends(get_db)):
+    # log_event(f"Dados recebidos na API: {userResponse}")
+    existing = user_service.login_user(db, userResponse.email, userResponse.password)
     if existing:
         raise HTTPException(status_code=400, detail="Esse email já foi registrado")
-    return user_service.register_user(db, name, email, password)
+    user = user_service.register_user(db, userResponse.name, userResponse.email, userResponse.password)
+    access_token = create_access_token(data={"sub": str(user.id)})
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email
+        }
+    }
 
 
 @router.post("/login")
-def login(email: str, password: str, db: Session = Depends(get_db)):
-    user = user_service.login_user(db, email, password)
+def login(login: LoginDto, db: Session = Depends(get_db)):
+    user = user_service.login_user(db, login.email, login.password)
     if user is None:
         raise HTTPException(status_code=401, detail="Credenciais inválidas")
-    return {"id": user.id, "name": user.name, "email": user.email}
+
+    access_token = create_access_token(data={"sub": str(user.id)})
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email
+        }
+    }
 
 
 @router.post('/analisar_audio')
