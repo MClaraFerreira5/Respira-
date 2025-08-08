@@ -1,5 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from sqlalchemy.orm import Session
+from datetime import datetime, timedelta, timezone 
 import soundfile as sf
 import numpy as np
 import io
@@ -11,7 +12,8 @@ from services.log.logger import log_event
 from db.session import get_db
 from services.user import user_service
 from services.auth.auth import create_access_token
-from api.dtos import (UserDto, LoginDto, SessionStartResponse, MonitoringResponse, SessionReportResponse)
+from api.dtos import (UserDto, LoginDto, SessionStartResponse, MonitoringResponse, SessionReportResponse,
+    AggregatedReport )
 from services import monitoring_service
 from core.dependencies import get_current_user
 
@@ -143,10 +145,6 @@ async def monitorar_audio(
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user)
 ):
-    """
-    Recebe um trecho de áudio (loop), verifica se a sessão é válida
-    e processa os eventos sonoros.
-    """
     active_session = monitoring_service.get_active_db_session(db, session_id=session_id, user_id=user_id)
     if not active_session:
         raise HTTPException(status_code=404, detail="Sessão de monitoramento não encontrada, expirada ou inválida.")
@@ -190,5 +188,58 @@ def finalizar_monitoramento(
     log_event(f"Sessão {session_id} finalizada. Relatório gerado.")
     return report
 
+
+reports_router = APIRouter(prefix="/relatorios", tags=["Relatórios"])
+
+def build_aggregated_report(sessions, start_date, end_date):
+    """Função auxiliar para construir a resposta do relatório agregado."""
+    report_items = monitoring_service.aggregate_sessions_data(sessions)
+    
+    total_tosse = sum(item['quantidade_tosse'] for item in report_items)
+    total_espirro = sum(item['quantidade_espirro'] for item in report_items)
+    total_outros = sum(item['outros_eventos'] for item in report_items)
+
+    return AggregatedReport(
+        periodo_inicio=start_date.strftime('%Y-%m-%d'),
+        periodo_fim=end_date.strftime('%Y-%m-%d'),
+        total_sessoes=len(sessions),
+        total_tosse=total_tosse,
+        total_espirro=total_espirro,
+        total_outros_eventos=total_outros,
+        sessoes=report_items
+    )
+
+@reports_router.get("/por_data", response_model=AggregatedReport)
+def get_report_by_date(
+    data: str, # Espera uma data no formato YYYY-MM-DD
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user)
+):
+    """Gera um relatório agregado de todas as sessões para uma data específica."""
+    try:
+        # Converte a string da data para um objeto datetime ciente do fuso horário
+        selected_date = datetime.strptime(data, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Formato de data inválido. Use YYYY-MM-DD.")
+
+    day_start = selected_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    day_end = day_start + timedelta(days=1)
+    
+    sessions = monitoring_service.get_sessions_by_date_range(db, user_id, day_start, day_end)
+    return build_aggregated_report(sessions, day_start, day_end)
+
+@reports_router.get("/semanal", response_model=AggregatedReport)
+def get_weekly_report(
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user)
+):
+    """Gera um relatório agregado de todas as sessões dos últimos 7 dias."""
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    seven_days_ago = today_start - timedelta(days=7)
+    
+    sessions = monitoring_service.get_sessions_by_date_range(db, user_id, seven_days_ago, today_start + timedelta(days=1))
+    return build_aggregated_report(sessions, seven_days_ago, today_start)
+
 router.include_router(auth_router)
 router.include_router(monitoring_router)
+router.include_router(reports_router)
