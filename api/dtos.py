@@ -1,5 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
+from typing import List
 
 class UserDto(BaseModel):
     name: str
@@ -28,3 +29,30 @@ class SessionReportResponse(BaseModel):
     outros_eventos: int
     data_hora_inicio: str
     data_hora_fim: str
+
+class SessionReportDetail(BaseModel):
+    """Representa os dados agregados de uma única sessão em um relatório."""
+    session_id: int
+    ambiente_predominante: str = Field(..., alias="ambientePredominante")
+    duracao_total_sessao_minutos: int = Field(..., alias="duracaoTotalSessaoMinutos")
+    quantidade_tosse: int = Field(..., alias="quantidadeTosse")
+    quantidade_espirro: int = Field(..., alias="quantidadeEspirro")
+    outros_eventos: int = Field(..., alias="outrosEventos")
+    data_hora_inicio: datetime = Field(..., alias="dataHoraInicio")
+    data_hora_fim: datetime | None = Field(..., alias="dataHoraFim")
+
+    class Config:
+        populate_by_name = True
+        orm_mode = True
+
+class AggregatedReport(BaseModel):
+    periodo_inicio: str = Field(..., alias="periodoInicio")
+    periodo_fim: str = Field(..., alias="periodoFim")
+    total_sessoes: int = Field(..., alias="totalSessoes")
+    total_tosse: int = Field(..., alias="totalTosse")
+    total_espirro: int = Field(..., alias="totalEspirro")
+    total_outros_eventos: int = Field(..., alias="totalOutrosEventos")
+    sessoes: List[SessionReportDetail]
+
+    class Config:
+        populate_by_name = True
