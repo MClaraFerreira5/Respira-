@@ -1,34 +1,36 @@
 # Processamento e visualização de dados
-numpy
-scipy
-matplotlib
+numpy~=1.24.3
+scipy~=1.15.3
+matplotlib~=3.10.3
 
 # Machine Learning
 tensorflow==2.13.0
 tensorflow-hub==0.15.0
 
 # Processamento de áudio
-sounddevice
-soundfile
-pydub
-SpeechRecognition
+sounddevice~=0.5.2
+soundfile~=0.13.1
+pydub~=0.25.1
+SpeechRecognition~=3.14.3
 
 # API & Web
-fastapi
-uvicorn
+fastapi~=0.115.12
+uvicorn~=0.34.3
 
 # Database
-sqlalchemy
-psycopg2-binary
-alembic
+sqlalchemy~=2.0.41
+psycopg2-binary~=2.9.10
+alembic~=1.16.4
 
 # Segurança e autenticação
-passlib[bcrypt]
+passlib[bcrypt]~=1.7.4
 bcrypt<4.1
-python-jose
+python-jose~=3.5.0
 
 # Utilitários
-cffi
-python-dotenv
-pydantic
-pydantic-settings
+cffi~=1.17.1
+python-dotenv~=1.1.0
+pydantic~=2.11.5
+pydantic-settings~=2.10.1
+pydantic_core~=2.33.2
+python-multipart~=0.0.20
