@@ -1,6 +1,6 @@
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta, timezone 
+from datetime import datetime, timedelta, timezone
 import soundfile as sf
 import numpy as np
 import io
@@ -13,13 +13,14 @@ from db.session import get_db
 from services.user import user_service
 from services.auth.auth import create_access_token
 from api.dtos import (UserDto, LoginDto, SessionStartResponse, MonitoringResponse, SessionReportResponse,
-    AggregatedReport )
+                      AggregatedReport)
 from services import monitoring_service
 from core.dependencies import get_current_user
 
 router = APIRouter()
 
 auth_router = APIRouter(prefix="/auth", tags=["Autenticação"])
+
 
 @auth_router.post("/register")
 def register(userResponse: UserDto, db: Session = Depends(get_db)):
@@ -62,38 +63,11 @@ def login(login: LoginDto, db: Session = Depends(get_db)):
 
 monitoring_router = APIRouter(prefix="/monitoramento", tags=["Monitoramento"])
 
-# @monitoring_router.post('/analisar_audio')
-# async def analisar_audio(file: UploadFile = File(...)):
-#     try:
-#         log_event("Recebendo arquivo de áudio")
-#         contents = await file.read()
-
-#         with open("audio_temp.wav", "wb") as f:
-#             f.write(contents)
-#         log_event("Arquivo salvo como audio_temp.wav")
-
-#         audio, sr = sf.read("audio_temp.wav")
-#         log_event(f"Áudio carregado (sample rate: {sr}, duração: {len(audio) / sr:.2f}s)")
-
-#         processado = preprocess_audio(audio)
-#         _, _, predicao = predict_sound(processado)
-#         log_event("Predição realizada com sucesso")
-
-#         imagem = generate_spectrogram(processado, predicao)
-#         log_event(f"Espectrograma salvo como {imagem}")
-
-#         return {"status": "ok", "espectrograma": imagem}
-
-#     except Exception as e:
-#         import traceback
-#         log_event(f"Erro na análise de áudio: {str(e)}", to_file=True)
-#         traceback.print_exc()
-#         return {"status": "erro", "detalhes": str(e)}
 
 @monitoring_router.post("/iniciar_sessao", response_model=SessionStartResponse)
 def iniciar_sessao_monitoramento(
-    db: Session = Depends(get_db),
-    user_id: int = Depends(get_current_user)
+        db: Session = Depends(get_db),
+        user_id: int = Depends(get_current_user)
 ):
     """
     Inicia uma nova sessão de monitoramento para o usuário logado.
@@ -101,19 +75,20 @@ def iniciar_sessao_monitoramento(
     """
     session = monitoring_service.create_db_session(db, user_id=user_id)
     log_event(f"Sessão {session.id} iniciada para o usuário {user_id}.")
-    
+
     return SessionStartResponse(
         session_id=session.id,
-        ambiente=session.noise_profile, 
+        ambiente=session.noise_profile,
         data_hora_inicio=session.start_time
     )
 
+
 @monitoring_router.post("/analisar_ambiente", response_model=MonitoringResponse)
 async def analisar_ambiente(
-    session_id: int,
-    file: UploadFile = File(...), 
-    db: Session = Depends(get_db),
-    user_id: int = Depends(get_current_user)
+        session_id: int = Query(...),
+        file: UploadFile = File(...),
+        db: Session = Depends(get_db),
+        user_id: int = Depends(get_current_user)
 ):
     """
     Recebe um áudio para analisar o perfil de ruído do ambiente
@@ -126,12 +101,12 @@ async def analisar_ambiente(
     try:
         contents = await file.read()
         audio, sr = sf.read(io.BytesIO(contents))
-        
+
         noise_profile = monitoring_service.get_noise_profile_from_audio(audio)
         monitoring_service.update_db_session_noise_profile(db, active_session, noise_profile)
-        
+
         log_event(f"Ambiente da sessão {session_id} atualizado para '{noise_profile}'")
-        
+
         return MonitoringResponse(status="ok", detalhes=f"Perfil de ruído atualizado para {noise_profile}.")
     except Exception as e:
         log_event(f"Erro ao analisar ambiente: {e}", to_file=True)
@@ -140,10 +115,10 @@ async def analisar_ambiente(
 
 @monitoring_router.post("/audio", response_model=MonitoringResponse)
 async def monitorar_audio(
-    session_id: int,
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    user_id: int = Depends(get_current_user)
+        session_id: int = Query(...),
+        file: UploadFile = File(...),
+        db: Session = Depends(get_db),
+        user_id: int = Depends(get_current_user)
 ):
     active_session = monitoring_service.get_active_db_session(db, session_id=session_id, user_id=user_id)
     if not active_session:
@@ -152,12 +127,12 @@ async def monitorar_audio(
     try:
         contents = await file.read()
         audio, sr = sf.read(io.BytesIO(contents))
-        
+
         processed_audio = preprocess_audio(audio)
         monitoring_service.record_detected_events(db, session_id=active_session.id, audio_data=processed_audio)
-        
+
         return MonitoringResponse(status="ok", detalhes="Áudio processado.")
-        
+
     except Exception as e:
         log_event(f"Erro ao processar áudio da sessão {session_id}: {e}", to_file=True)
         raise HTTPException(status_code=500, detail=f"Erro interno do servidor: {e}")
@@ -165,9 +140,9 @@ async def monitorar_audio(
 
 @monitoring_router.get("/finalizar/{session_id}", response_model=SessionReportResponse)
 def finalizar_monitoramento(
-    session_id: int,
-    db: Session = Depends(get_db),
-    user_id: int = Depends(get_current_user)
+        session_id: int,
+        db: Session = Depends(get_db),
+        user_id: int = Depends(get_current_user)
 ):
     """
     Finaliza uma sessão de monitoramento e retorna um relatório agregado
@@ -180,10 +155,10 @@ def finalizar_monitoramento(
 
     if not session:
         raise HTTPException(status_code=404, detail="Sessão de monitoramento não encontrada.")
-    
+
     if not session.end_time:
         session = monitoring_service.close_db_session(db, session)
-    
+
     report = monitoring_service.generate_session_report(session)
     log_event(f"Sessão {session_id} finalizada. Relatório gerado.")
     return report
@@ -191,10 +166,11 @@ def finalizar_monitoramento(
 
 reports_router = APIRouter(prefix="/relatorios", tags=["Relatórios"])
 
+
 def build_aggregated_report(sessions, start_date, end_date):
     """Função auxiliar para construir a resposta do relatório agregado."""
     report_items = monitoring_service.aggregate_sessions_data(sessions)
-    
+
     total_tosse = sum(item['quantidade_tosse'] for item in report_items)
     total_espirro = sum(item['quantidade_espirro'] for item in report_items)
     total_outros = sum(item['outros_eventos'] for item in report_items)
@@ -209,11 +185,12 @@ def build_aggregated_report(sessions, start_date, end_date):
         sessoes=report_items
     )
 
+
 @reports_router.get("/por_data", response_model=AggregatedReport)
 def get_report_by_date(
-    data: str, # Espera uma data no formato YYYY-MM-DD
-    db: Session = Depends(get_db),
-    user_id: int = Depends(get_current_user)
+        data: str,  # Espera uma data no formato YYYY-MM-DD
+        db: Session = Depends(get_db),
+        user_id: int = Depends(get_current_user)
 ):
     """Gera um relatório agregado de todas as sessões para uma data específica."""
     try:
@@ -224,21 +201,24 @@ def get_report_by_date(
 
     day_start = selected_date.replace(hour=0, minute=0, second=0, microsecond=0)
     day_end = day_start + timedelta(days=1)
-    
+
     sessions = monitoring_service.get_sessions_by_date_range(db, user_id, day_start, day_end)
     return build_aggregated_report(sessions, day_start, day_end)
 
+
 @reports_router.get("/semanal", response_model=AggregatedReport)
 def get_weekly_report(
-    db: Session = Depends(get_db),
-    user_id: int = Depends(get_current_user)
+        db: Session = Depends(get_db),
+        user_id: int = Depends(get_current_user)
 ):
     """Gera um relatório agregado de todas as sessões dos últimos 7 dias."""
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     seven_days_ago = today_start - timedelta(days=7)
-    
-    sessions = monitoring_service.get_sessions_by_date_range(db, user_id, seven_days_ago, today_start + timedelta(days=1))
+
+    sessions = monitoring_service.get_sessions_by_date_range(db, user_id, seven_days_ago,
+                                                             today_start + timedelta(days=1))
     return build_aggregated_report(sessions, seven_days_ago, today_start)
+
 
 router.include_router(auth_router)
 router.include_router(monitoring_router)

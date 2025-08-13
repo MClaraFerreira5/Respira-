@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import List
 import re
 
+
 class UserDto(BaseModel):
     name: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
@@ -15,18 +16,22 @@ class UserDto(BaseModel):
         if not re.search(r'[0-9]', v): raise ValueError('A senha precisa de um número')
         return v
 
+
 class LoginDto(BaseModel):
     email: EmailStr
     password: str
+
 
 class SessionStartResponse(BaseModel):
     session_id: int
     ambiente: str
     data_hora_inicio: datetime
 
+
 class MonitoringResponse(BaseModel):
     status: str
     detalhes: str | None = None
+
 
 class SessionReportResponse(BaseModel):
     session_id: int
@@ -36,6 +41,7 @@ class SessionReportResponse(BaseModel):
     outros_eventos: int
     data_hora_inicio: str
     data_hora_fim: str
+
 
 class SessionReportDetail(BaseModel):
     """Representa os dados agregados de uma única sessão em um relatório."""
@@ -51,6 +57,7 @@ class SessionReportDetail(BaseModel):
     class Config:
         populate_by_name = True
         orm_mode = True
+
 
 class AggregatedReport(BaseModel):
     periodo_inicio: str = Field(..., alias="periodoInicio")
