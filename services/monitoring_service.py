@@ -1,5 +1,6 @@
 import numpy as np
 from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from datetime import datetime, timezone
 from collections import Counter
 
@@ -67,9 +68,6 @@ def record_detected_events(db: Session, session_id: int, audio_data: np.ndarray)
 
 
 def generate_session_report(session: MonitoringSession) -> dict:
-    """
-    Gera um relatório agregado a partir dos eventos já carregados na sessão.
-    """
     event_counts = Counter(event.event_type for event in session.events)
     
     tosse_count = event_counts.get('Tosse', 0)
@@ -88,3 +86,37 @@ def generate_session_report(session: MonitoringSession) -> dict:
         "data_hora_inicio": session.start_time.isoformat(),
         "data_hora_fim": end_time.isoformat()
     }
+
+def get_sessions_by_date_range(db: Session, user_id: int, start_date: datetime, end_date: datetime):
+    """Busca todas as sessões finalizadas de um usuário em um intervalo de datas."""
+    return db.query(MonitoringSession).options(
+        selectinload(MonitoringSession.events)
+    ).filter(
+        MonitoringSession.user_id == user_id,
+        MonitoringSession.start_time >= start_date,
+        MonitoringSession.start_time < end_date,
+        MonitoringSession.end_time != None
+    ).order_by(MonitoringSession.start_time.desc()).all()
+
+def format_duration(start_time, end_time):
+    if not start_time or not end_time:
+        return 0
+    duration_seconds = (end_time - start_time).total_seconds()
+    return int(duration_seconds / 60)
+
+def aggregate_sessions_data(sessions: list[MonitoringSession]) -> list[dict]:
+    report_items = []
+    for session in sessions:
+        event_counts = Counter(event.event_type for event in session.events)
+        item = {
+            "session_id": session.id,
+            "ambiente_predominante": session.noise_profile,
+            "duracao_total_sessao_minutos": format_duration(session.start_time, session.end_time),
+            "quantidade_tosse": event_counts.get('Tosse', 0),
+            "quantidade_espirro": event_counts.get('Espirro', 0),
+            "outros_eventos": sum(count for event_type, count in event_counts.items() if event_type not in ['Tosse', 'Espirro']),
+            "data_hora_inicio": session.start_time,
+            "data_hora_fim": session.end_time
+        }
+        report_items.append(item)
+    return report_items
