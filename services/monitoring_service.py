@@ -1,11 +1,11 @@
-import numpy as np
-from sqlalchemy.orm import Session
-from sqlalchemy.orm import Session, selectinload
-from datetime import datetime, timezone
 from collections import Counter
+from datetime import datetime, timezone
+
+import numpy as np
+from sqlalchemy.orm import Session, selectinload
 
 from models.monitoring_model import MonitoringSession, DetectedEvent
-from services.prediction_recognition.prediction import predict_sound, get_class_name, CLASS_INDICES
+from services.prediction_recognition.prediction import predict_sound, CLASS_INDICES
 
 
 def get_noise_profile_from_audio(audio_data: np.ndarray) -> str:
@@ -13,7 +13,7 @@ def get_noise_profile_from_audio(audio_data: np.ndarray) -> str:
     
     if rms_energy < 0.01:
         return "silencioso"
-    elif rms_energy < 0.1:
+    elif rms_energy < 0.02:
         return "moderado"
     else:
         return "ruidoso"

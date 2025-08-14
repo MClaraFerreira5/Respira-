@@ -1,21 +1,19 @@
+import io
+from datetime import datetime, timedelta, timezone
+
+import librosa
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta, timezone
-import soundfile as sf
-import numpy as np
-import io
 
-from services.processing.audio_processing import preprocess_audio
-from services.prediction_recognition.prediction import predict_sound
-from services.visualization.visualization import generate_spectrogram
-from services.log.logger import log_event
-from db.session import get_db
-from services.user import user_service
-from services.auth.auth import create_access_token
 from api.dtos import (UserDto, LoginDto, SessionStartResponse, MonitoringResponse, SessionReportResponse,
                       AggregatedReport)
-from services import monitoring_service
 from core.dependencies import get_current_user
+from db.session import get_db
+from services import monitoring_service
+from services.auth.auth import create_access_token
+from services.log.logger import log_event
+from services.processing.audio_processing import preprocess_audio
+from services.user import user_service
 
 router = APIRouter()
 
@@ -43,8 +41,8 @@ def register(userResponse: UserDto, db: Session = Depends(get_db)):
 
 
 @auth_router.post("/login")
-def login(login: LoginDto, db: Session = Depends(get_db)):
-    user = user_service.login_user(db, login.email, login.password)
+def login(loginDto: LoginDto, db: Session = Depends(get_db)):
+    user = user_service.login_user(db, loginDto.email, loginDto.password)
     if user is None:
         raise HTTPException(status_code=401, detail="Credenciais inválidas")
 
@@ -100,7 +98,7 @@ async def analisar_ambiente(
 
     try:
         contents = await file.read()
-        audio, sr = sf.read(io.BytesIO(contents))
+        audio, sr = librosa.load(io.BytesIO(contents), sr=16000, mono=True)
 
         noise_profile = monitoring_service.get_noise_profile_from_audio(audio)
         monitoring_service.update_db_session_noise_profile(db, active_session, noise_profile)
@@ -126,7 +124,12 @@ async def monitorar_audio(
 
     try:
         contents = await file.read()
-        audio, sr = sf.read(io.BytesIO(contents))
+        audio, sr = librosa.load(io.BytesIO(contents), sr=16000, mono=True)
+
+        log_event(f"Sample rate: {sr} Hz")
+        log_event(f"Formato interno: {audio.dtype}")
+        log_event(f"Número de canais: {audio.shape[1] if audio.ndim > 1 else 1}")
+        log_event(f"Duração: {len(audio) / sr:.2f} segundos")
 
         processed_audio = preprocess_audio(audio)
         monitoring_service.record_detected_events(db, session_id=active_session.id, audio_data=processed_audio)
@@ -149,8 +152,8 @@ def finalizar_monitoramento(
     dos eventos detectados.
     """
     session = db.query(monitoring_service.MonitoringSession).filter(
-        monitoring_service.MonitoringSession.id == session_id,
-        monitoring_service.MonitoringSession.user_id == user_id
+        session_id == monitoring_service.MonitoringSession.id,
+        user_id == monitoring_service.MonitoringSession.user_id
     ).first()
 
     if not session:
@@ -188,7 +191,7 @@ def build_aggregated_report(sessions, start_date, end_date):
 
 @reports_router.get("/por_data", response_model=AggregatedReport)
 def get_report_by_date(
-        data: str,  # Espera uma data no formato YYYY-MM-DD
+        data: str = Query(...),  # Espera uma data no formato YYYY-MM-DD
         db: Session = Depends(get_db),
         user_id: int = Depends(get_current_user)
 ):
