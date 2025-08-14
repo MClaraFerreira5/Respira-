@@ -11,7 +11,7 @@ def preprocess_audio(audio):
 
     # Filtro passa-banda
     lowcut = 50
-    highcut = 3000
+    highcut = 7000
     nyquist = 0.5 * SAMPLE_RATE
     low = lowcut / nyquist
     high = highcut / nyquist
@@ -26,6 +26,6 @@ def preprocess_audio(audio):
     if len(valid_samples) > 0:
         start = max(0, valid_samples[0] - 100)
         end = min(len(audio), valid_samples[-1] + 100)
-        audio[start:end]
+        audio = audio[start:end]
 
     return audio.astype(np.float32)

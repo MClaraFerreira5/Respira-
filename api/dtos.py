@@ -1,7 +1,9 @@
-from pydantic import BaseModel, Field, EmailStr, field_validator
+import re
 from datetime import datetime
 from typing import List
-import re
+
+from pydantic import BaseModel, Field, EmailStr, field_validator
+
 
 class UserDto(BaseModel):
     name: str = Field(..., min_length=3, max_length=50)
@@ -15,18 +17,22 @@ class UserDto(BaseModel):
         if not re.search(r'[0-9]', v): raise ValueError('A senha precisa de um número')
         return v
 
+
 class LoginDto(BaseModel):
     email: EmailStr
     password: str
+
 
 class SessionStartResponse(BaseModel):
     session_id: int
     ambiente: str
     data_hora_inicio: datetime
 
+
 class MonitoringResponse(BaseModel):
     status: str
     detalhes: str | None = None
+
 
 class SessionReportResponse(BaseModel):
     session_id: int
@@ -36,6 +42,7 @@ class SessionReportResponse(BaseModel):
     outros_eventos: int
     data_hora_inicio: str
     data_hora_fim: str
+
 
 class SessionReportDetail(BaseModel):
     """Representa os dados agregados de uma única sessão em um relatório."""
@@ -52,6 +59,7 @@ class SessionReportDetail(BaseModel):
         populate_by_name = True
         orm_mode = True
 
+
 class AggregatedReport(BaseModel):
     periodo_inicio: str = Field(..., alias="periodoInicio")
     periodo_fim: str = Field(..., alias="periodoFim")
@@ -63,3 +71,13 @@ class AggregatedReport(BaseModel):
 
     class Config:
         populate_by_name = True
+
+
+class DailySummary(BaseModel):
+    data: str
+    total_sessoes: int
+    total_tosse: int
+    total_espirro: int
+    total_outros_eventos: int
+    ambiente_predominante: str
+    duracao_total_minutos: int
