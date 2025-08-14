@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field, EmailStr, field_validator
+import re
 from datetime import datetime
 from typing import List
-import re
+
+from pydantic import BaseModel, Field, EmailStr, field_validator
 
 
 class UserDto(BaseModel):
@@ -70,3 +71,13 @@ class AggregatedReport(BaseModel):
 
     class Config:
         populate_by_name = True
+
+
+class DailySummary(BaseModel):
+    data: str
+    total_sessoes: int
+    total_tosse: int
+    total_espirro: int
+    total_outros_eventos: int
+    ambiente_predominante: str
+    duracao_total_minutos: int

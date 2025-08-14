@@ -1,15 +1,17 @@
 import io
 from datetime import datetime, timedelta, timezone
+from typing import List
 
 import librosa
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from api.dtos import (UserDto, LoginDto, SessionStartResponse, MonitoringResponse, SessionReportResponse,
-                      AggregatedReport)
+                      AggregatedReport, DailySummary)
 from core.dependencies import get_current_user
 from db.session import get_db
 from services import monitoring_service
+from services.agregation import build_daily_summary
 from services.auth.auth import create_access_token
 from services.log.logger import log_event
 from services.processing.audio_processing import preprocess_audio
@@ -126,10 +128,10 @@ async def monitorar_audio(
         contents = await file.read()
         audio, sr = librosa.load(io.BytesIO(contents), sr=16000, mono=True)
 
-        log_event(f"Sample rate: {sr} Hz")
-        log_event(f"Formato interno: {audio.dtype}")
-        log_event(f"Número de canais: {audio.shape[1] if audio.ndim > 1 else 1}")
-        log_event(f"Duração: {len(audio) / sr:.2f} segundos")
+        # log_event(f"Sample rate: {sr} Hz")
+        # log_event(f"Formato interno: {audio.dtype}")
+        # log_event(f"Número de canais: {audio.shape[1] if audio.ndim > 1 else 1}")
+        # log_event(f"Duração: {len(audio) / sr:.2f} segundos")
 
         processed_audio = preprocess_audio(audio)
         monitoring_service.record_detected_events(db, session_id=active_session.id, audio_data=processed_audio)
@@ -170,28 +172,9 @@ def finalizar_monitoramento(
 reports_router = APIRouter(prefix="/relatorios", tags=["Relatórios"])
 
 
-def build_aggregated_report(sessions, start_date, end_date):
-    """Função auxiliar para construir a resposta do relatório agregado."""
-    report_items = monitoring_service.aggregate_sessions_data(sessions)
-
-    total_tosse = sum(item['quantidade_tosse'] for item in report_items)
-    total_espirro = sum(item['quantidade_espirro'] for item in report_items)
-    total_outros = sum(item['outros_eventos'] for item in report_items)
-
-    return AggregatedReport(
-        periodo_inicio=start_date.strftime('%Y-%m-%d'),
-        periodo_fim=end_date.strftime('%Y-%m-%d'),
-        total_sessoes=len(sessions),
-        total_tosse=total_tosse,
-        total_espirro=total_espirro,
-        total_outros_eventos=total_outros,
-        sessoes=report_items
-    )
-
-
 @reports_router.get("/por_data", response_model=AggregatedReport)
 def get_report_by_date(
-        data: str = Query(...),  # Espera uma data no formato YYYY-MM-DD
+        data: str = Query(..., description="Data no formato YYYY-MM-DD"),
         db: Session = Depends(get_db),
         user_id: int = Depends(get_current_user)
 ):
@@ -209,6 +192,10 @@ def get_report_by_date(
     return build_aggregated_report(sessions, day_start, day_end)
 
 
+def build_aggregated_report(sessions, seven_days_ago, today_start):
+    pass
+
+
 @reports_router.get("/semanal", response_model=AggregatedReport)
 def get_weekly_report(
         db: Session = Depends(get_db),
@@ -221,6 +208,57 @@ def get_weekly_report(
     sessions = monitoring_service.get_sessions_by_date_range(db, user_id, seven_days_ago,
                                                              today_start + timedelta(days=1))
     return build_aggregated_report(sessions, seven_days_ago, today_start)
+
+
+@reports_router.get("/resumo_diario", response_model=DailySummary)
+def get_daily_summary(
+        data: str = Query(..., description="Data no formato YYYY-MM-DD"),
+        db: Session = Depends(get_db),
+        user_id: int = Depends(get_current_user)
+):
+    """Retorna um resumo consolidado das sessões de um dia específico."""
+    try:
+        selected_date = datetime.strptime(data, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Formato de data inválido. Use YYYY-MM-DD.")
+
+    day_start = selected_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    day_end = day_start + timedelta(days=1)
+
+    sessions = monitoring_service.get_sessions_by_date_range(db, user_id, day_start, day_end)
+    return build_daily_summary(sessions, selected_date)
+
+
+@reports_router.get("/por_periodo", response_model=List[DailySummary])
+def get_reports_by_range(
+        data_inicio: str = Query(..., description="Data inicial no formato YYYY-MM-DD"),
+        data_fim: str = Query(..., description="Data final no formato YYYY-MM-DD"),
+        db: Session = Depends(get_db),
+        user_id: int = Depends(get_current_user)
+):
+    """Retorna um resumo consolidado das sessões para cada dia dentro de um período."""
+    try:
+        start_date = datetime.strptime(data_inicio, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        end_date = datetime.strptime(data_fim, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Formato de data inválido. Use YYYY-MM-DD.")
+
+    if start_date > end_date:
+        raise HTTPException(status_code=400, detail="Data inicial não pode ser maior que a final.")
+
+    summaries = []
+    current_date = start_date
+
+    while current_date <= end_date:
+        day_start = current_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+
+        sessions = monitoring_service.get_sessions_by_date_range(db, user_id, day_start, day_end)
+        summaries.append(build_daily_summary(sessions, current_date))
+
+        current_date += timedelta(days=1)
+
+    return summaries
 
 
 router.include_router(auth_router)
